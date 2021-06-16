@@ -386,9 +386,9 @@ int sim_gantt(char* filename){ // only works in ./edf_task_data.txt
     input_read(filename);
 
     FILE * fp;
-    if((fp = fopen("./data/gantt/gantt.txt", "wb")) == -1)
+    if((fp = fopen("./data/gantt/edf_gantt.txt", "wb")) == -1)
     {
-        perror("failed to open ./gantt.txt");
+        perror("failed to open ./edf_gantt.txt");
         return -1;
     }
     char * tmp_buffer = (char*) malloc(sizeof(char) * 1000); // size is fixed 1000, size must be same with fwrite_gantt() - memset
