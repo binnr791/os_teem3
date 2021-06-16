@@ -7,7 +7,7 @@
 #define MAX_LINE_LENGTH 20
 #define input_data_path "./edf_task_data.txt"
 
-int timer = 0;
+int timer = 0; // current time
 int idle_time = 0;
 int task_num = 0; // this indicate how many task in txt file, initialized in input_read
 int dequeued_task = 0;
@@ -25,7 +25,7 @@ typedef struct TaskStatus {
     int response_t;
     int remain_burst_t;
     int deadline;
-    int cpu_flag;
+    int cpu_flag; // check if it has grapped cpu after enqueued
     Task task;
 } TaskStatus;
 
@@ -140,31 +140,6 @@ TaskStatus dequeue(Queue *queue)
 
 Task tasks[MAX_CNT];
 
-void input_read(){
-    char *resource_path = input_data_path;
-    char buffer[MAX_LINE_LENGTH];
-    Task task;
-    int file_size = 0;
-    FILE * fp;
-    
-    if ((fp = fopen(resource_path, "rb")) == NULL) {
-        return;
-    }
-    for(int i = 0; fgets(buffer, MAX_LINE_LENGTH, fp) != NULL; i++){
-        char * temp = strtok(buffer, " ");
-        task.arrival_t = atoi(temp);
-        temp = strtok(NULL, " ");
-        task.burst_t = atoi(temp);
-        temp = strtok(NULL, " ");
-        task.deadline = atoi(temp);
-        task.pid = i + 1;
-        // printf("arrival: %d burst: %d deadline: %d\n", task.arrival_t, task.burst_t, task.deadline);
-        tasks[i] = task;
-        task_num += 1;
-    }
-    fclose(fp);
-}
-
 void ready_sorted_enqueue(){
     for (int i = 0; i < task_num; i++) // not max_cnt, 
     {
@@ -181,21 +156,6 @@ void ready_sorted_enqueue(){
             printf("%ds PID: %d INSERTED\n", timer - 1, tasks[i].pid);
             sorted_enqueue(&ready_queue, task_status);
         }
-        // delete because this consider deadline = period
-        // else if (timer > (tasks[i].arrival_t + 1) && ((timer - (tasks[i].arrival_t + 1)) % tasks[i].deadline) == 0)
-        // {
-		// printf("insert because of period\n");
-        //     TaskStatus task_status;
-        //     task_status.turnaround_t = 0;
-        //     task_status.waiting_t = 0;
-        //     task_status.response_t = 0;
-        //     task_status.remain_burst_t = tasks[i].burst_t;
-        //     task_status.cpu_flag = 0;
-        //     task_status.task = tasks[i];
-        //     task_status.deadline = tasks[i].deadline + timer;
-        //     printf("%ds PID: %d INSERTED\n", timer - 1, tasks[i].pid);
-        //     sorted_enqueue(&ready_queue, task_status);
-        // }
     }
 }
 
@@ -212,7 +172,7 @@ void update(){
     Node * curr = ready_queue.front;
     if (is_empty(&ready_queue) == 1)
     {
-        printf("%ds IDLE\n", timer);
+        //printf("%ds IDLE\n", timer);
         idle_time += 1;
         return;
     }
@@ -282,7 +242,7 @@ void update_gantt(FILE * fp, char * tmp_buffer){
     Node * curr = ready_queue.front;
     if (is_empty(&ready_queue) == 1)
     {
-        printf("%ds IDLE\n", timer);
+        //printf("%ds IDLE\n", timer);
         idle_time += 1;
         fwrite_gantt(fp, tmp_buffer, 0);
         return;
@@ -301,7 +261,7 @@ void update_gantt(FILE * fp, char * tmp_buffer){
     {
         printf("%ds PID: %d CPU BURST\n", timer, running_task_status->task.pid);
         TaskStatus task = dequeue(&ready_queue);
-        sorted_enqueue(&result_queue, task); // debug
+        sorted_enqueue(&result_queue, task); // preparing printing result and debugging
         if (is_empty(&ready_queue)) return;
         curr = ready_queue.front;
     }
@@ -363,10 +323,9 @@ void cal_performance(Queue* result)
     printf("throughput: %.3f (process/sec)\n",throughput);
 }
 
-void new_input_read(char* filename) // not using const string, using parameter to read file
+void input_read(char* filename) // not using const string, using parameter to read file
 {
     char *resource_path = filename;
-    //char *resource_path =  "./edf_task_data.txt";
     char buffer[MAX_LINE_LENGTH];
     Task task;
     int file_size = 0;
@@ -402,13 +361,12 @@ int is_completed()
     return 1;
 }
 
-int sim(char* filename){ // fix this later
+int sim(char* filename){
     task_num = 0; // trace the number of tasks in txt file
     dequeued_task = 0;
     init_queue(&ready_queue);
     init_queue(&result_queue);
-    //input_read();
-    new_input_read(filename);
+    input_read(filename);
     while(is_completed())
     {
         timer++;
@@ -425,8 +383,7 @@ int sim_gantt(char* filename){ // only works in ./edf_task_data.txt
     dequeued_task = 0;
     init_queue(&ready_queue);
     init_queue(&result_queue);
-    //input_read();
-    new_input_read(filename);
+    input_read(filename);
 
     FILE * fp;
     if((fp = fopen("./data/gantt/gantt.txt", "wb")) == -1)
@@ -482,7 +439,7 @@ int main(void)
                 }
                 else
                 {
-                    sim(filename);
+                    sim(filename); // not writing txt data
                 }
                 timer = 0; // should report total time before this line
             }
